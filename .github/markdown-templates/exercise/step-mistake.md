@@ -1,4 +1,4 @@
-<img alt="Amin 2.0" src="../../images/amin2_try-again.png" align="right" height="125px" />
+<img alt="Amin 2.0" src="https://github.com/markus-kunnari-gofore/07-ai-training-quality-assurance/blob/main/.github/images/amin2_try-again.png?raw=true" align="right" height="125px" />
 
 It looks like you made a mistake or skipped a step.
 

@@ -3,7 +3,7 @@
 # 🎉 Congratulations {{ login }}! 🎉
 
 <!-- Replace alt text and image name to use the correct module. -->
-<img alt="badge module 7/11 complete" src="../../images/badge-module-07.png" height="200px" />
+<img alt="badge module 7/11 complete" src="https://github.com/markus-kunnari-gofore/07-ai-training-quality-assurance/blob/main/.github/images/badge-module-07.png?raw=true" height="200px" />
 
 ### 🌟 You've successfully completed the exercise! 🌟
 

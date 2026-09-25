@@ -1,6 +1,6 @@
 # Success! 🏆 You've completed {{ title }}.
 
-<img alt="Amin 2.0" src="../../images/amin2_original.png" align="left" height="150px" />
+<img alt="Amin 2.0" src="https://github.com/markus-kunnari-gofore/07-ai-training-quality-assurance/blob/main/.github/images/amin2_original.png?raw=true" align="left" height="150px" />
 
 Congratulations @{{ login }}! You finished the exercise! 🎉🎉🎉
 

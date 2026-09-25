@@ -1,6 +1,6 @@
 # {{ title }}
 
-<img alt="Amin 2.0" src="../../images/amin2_smile.png" align="right" height="200px" />
+<img alt="Amin 2.0" src="https://github.com/markus-kunnari-gofore/07-ai-training-quality-assurance/blob/main/.github/images/amin2_smile.png?raw=true" align="right" height="200px" />
 
 Hey {{ login }}!
 

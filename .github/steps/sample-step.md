@@ -13,7 +13,7 @@ Step text content here. See below for an example "Having trouble?" section.
 
 ---
 
-<img alt="Amin 2.0" src="../images/amin2_smile.png" align="right" height="125px" />
+<img alt="Amin 2.0" src="https://github.com/markus-kunnari-gofore/07-ai-training-quality-assurance/blob/main/.github/images/amin2_smile.png?raw=true" align="right" height="125px" />
 
 Please, follow the steps above.
 I'll watch your progress in the background to provide feedback. 🧐
