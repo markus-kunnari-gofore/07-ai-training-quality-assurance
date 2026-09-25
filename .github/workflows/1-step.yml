@@ -1,0 +1,224 @@
+# Name is Step x, where x is the last step number in the exercise.
+name: Step 1
+
+# Set these variables to have the correct exercise name and module title.
+env:
+  EXERCISE_NAME: "ai-training-quality-assurance"
+  MODULE_TITLE: "Code Quality Assurance with Agents"
+
+# Define how the workflow is triggered.
+on:
+  push:
+    paths:
+      - 'docs/ReviewFindings.md'
+      - 'app/tests/**'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+jobs:
+  check_initial_commit:
+    name: Check if initial commit
+    runs-on: ubuntu-latest
+    outputs:
+      is-initial: ${{ steps.check.outputs.is-initial }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check commit count
+        id: check
+        run: |
+          commit_count=$(git rev-list --count HEAD)
+          echo "is-initial=$([[ $commit_count -eq 1 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+  find_exercise:
+    name: Find Exercise Issue
+    needs: check_initial_commit
+    if: needs.check_initial_commit.outputs.is-initial == 'false'
+    uses: skills/exercise-toolkit/.github/workflows/find-exercise-issue.yml@v0.8.1
+
+  post_checking_message:
+    name: Post checking work message
+    needs: [find_exercise]
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ needs.find_exercise.outputs.issue-number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Post checking work message
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          repository: ${{ env.ISSUE_REPOSITORY }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
+          file: .github/markdown-templates/exercise/checking-work.md
+
+  run_checks:
+    name: Run Checks
+    runs-on: ubuntu-latest
+    needs: post_checking_message
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check ReviewFindings.md exists and is not empty
+        run: |
+          if [ ! -s docs/ReviewFindings.md ]; then
+            echo "docs/ReviewFindings.md is missing or empty"
+            exit 1
+          fi
+
+      - name: Check tests folder has at least 5 test blocks
+        run: |
+          test_block_count=$(grep -rEo "it\(|test\(" app/tests/ | wc -l)
+          if [ "$test_block_count" -lt 5 ]; then
+            echo "Expected at least 5 it( or test( blocks in app/tests/, found $test_block_count"
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install
+
+      - name: Run tests
+        working-directory: app
+        run: npm test
+
+  post_final_content:
+    name: Post final content
+    needs: [find_exercise, run_checks]
+    if: needs.run_checks.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ needs.find_exercise.outputs.issue-number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Disable current workflow
+        run: |
+          gh workflow disable "${{github.workflow}}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  finish_exercise:
+    name: Finish Exercise
+    needs: [find_exercise, run_checks]
+    if: needs.run_checks.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ needs.find_exercise.outputs.issue-number }}
+      ISSUE_URL: ${{ needs.find_exercise.outputs.issue-url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build final comment from local template
+        id: build-final-comment
+        uses: skills/action-text-variables@v3
+        with:
+          template-file: .github/markdown-templates/exercise/exercise-finished.md
+          template-vars: |
+            title: ${{ env.MODULE_TITLE }}
+            login: ${{ github.actor }}
+            repo_full_name: ${{ github.repository }}
+
+      - name: Build final README from local template
+        id: build-final-readme
+        uses: skills/action-text-variables@v3
+        with:
+          template-file: .github/markdown-templates/readme/exercise-finished.md
+          template-vars: |
+            login: ${{ github.actor }}
+            issue_url: ${{ env.ISSUE_URL }}
+
+      - name: Find last comment
+        id: find-last-comment
+        uses: peter-evans/find-comment@v4
+        with:
+          repository: ${{ env.ISSUE_REPOSITORY }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
+          direction: last
+
+      - name: Update comment with final message
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          repository: ${{ env.ISSUE_REPOSITORY }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
+          comment-id: ${{ steps.find-last-comment.outputs.comment-id }}
+          body: ${{ steps.build-final-comment.outputs.updated-text }}
+          edit-mode: replace
+
+      - name: Close issue
+        run: |
+          gh issue close ${{ env.ISSUE_NUMBER }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update README
+        env:
+          README_TEXT: ${{ steps.build-final-readme.outputs.updated-text }}
+        run: echo "$README_TEXT" > README.md
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: "README.md"
+          message: "Congratulations!🎉"
+          default_author: github_actions
+
+  post_mistake_message:
+    name: Post mistake message
+    needs: [find_exercise, run_checks]
+    if: always() && needs.run_checks.result == 'failure'
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ needs.find_exercise.outputs.issue-number }}
+
+    # Set the feedback message to a proper one in the 'Build mistake message from local template' step.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build mistake message from local template
+        id: build-mistake-message
+        uses: skills/action-text-variables@v3
+        with:
+          template-file: .github/markdown-templates/exercise/step-mistake.md
+          template-vars: |
+            feedback_message: "One or more checks failed. Make sure: (1) `docs/ReviewFindings.md` exists and is not empty, (2) `app/tests/` contains a combined total of at least 5 `it(` or `test(` blocks, and (3) `npm test` passes. Check the [Actions](../actions) tab for details."
+
+      - name: Find last comment
+        id: find-last-comment
+        uses: peter-evans/find-comment@v4
+        with:
+          repository: ${{ env.ISSUE_REPOSITORY }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
+          direction: last
+
+      - name: Update comment with mistake message
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          repository: ${{ env.ISSUE_REPOSITORY }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
+          comment-id: ${{ steps.find-last-comment.outputs.comment-id }}
+          body: ${{ steps.build-mistake-message.outputs.updated-text }}
+          edit-mode: replace
